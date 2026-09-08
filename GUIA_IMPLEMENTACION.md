@@ -318,3 +318,47 @@ Plantilla para el pipeline corporativo de GitLab con stages:
 
 ### 9.3 Archivo de Exclusiones Git (`.gitignore`)
 Previene la subida accidental de binarios compilados (`server.exe`, `mock-finnflow`), empaquetados `.tar`, logs y reportes de cobertura temporales.
+
+¡Excelente! El pipeline corrió completo y los 3 Jobs finalizaron en VERDE con 100% de éxito:
+
+✅ Unit Tests & Parity Verification (success)
+✅ Integration Smoke Test (Kong + Go + Mock) (success)
+✅ Build & Publish Docker Image to GHCR (success)
+Puedes ver la ejecución completa aquí:
+👉 GitHub Actions Run #34244740197
+
+📦 ¿Qué es el artefacto que se generó en GitHub?
+El artefacto se llama go-coverage-report (un archivo .zip que contiene coverage.out).
+
+¿Qué contiene?
+Es el reporte oficial de cobertura de código generado por Go (-coverprofile). Contiene la métrica exacta línea por línea de cuánto código fue validado por las pruebas unitarias (superando el 50–60% de cobertura total en la primera versión).
+¿Dónde descargarlo?
+Al entrar al enlace del run de GitHub, ve al final de la página a la sección Artifacts y haz clic en go-coverage-report para descargar el archivo .zip.
+🎨 ¿Cómo visualizar ese reporte de forma gráfica e interactiva?
+Si descomprimes el .zip y tomas el archivo coverage.out, puedes convertirlo en una página web interactiva con la herramienta nativa de Go:
+
+powershell
+
+
+cd C:\proyecto-hipotecario\mortgage-loan-catalogs-go
+# Generar la página HTML visual de cobertura
+go tool cover -html=coverage.out -o coverage.html
+# Abrirla en tu navegador
+start coverage.html
+¿Qué verás en tu navegador?
+
+Un menú desplegable con cada paquete (catalog, httpclient, server).
+Todo tu código fuente coloreado:
+🟢 Verde: Líneas de código ejecutadas y validadas por los tests.
+🔴 Rojo: Líneas que no pasaron por ningún test (por ejemplo, errores de conexión de red extrema o casos excepcionales).
+⚪ Gris: Declaraciones de estructuras, interfaces y comentarios.
+🐳 Imagen Docker Publicada Automáticamente
+Además del reporte de cobertura, el tercer Job publicó automáticamente la imagen Docker lista para producción en el registro oficial de GitHub (GitHub Packages / GHCR):
+
+Paquete: ghcr.io/mileywily/proyecto-hipotecario/mortgage-loan-catalogs-go:latest
+Cualquier miembro del equipo o clúster de Kubernetes puede descargar la imagen directamente con:
+
+bash
+
+
+docker pull ghcr.io/mileywily/proyecto-hipotecario/mortgage-loan-catalogs-go:latest
