@@ -36,8 +36,8 @@ func TestCatalogRoutingRules(t *testing.T) {
 		{"SEGUROS_TOTAL", CatalogTypeSeguros, true, false, false},
 		{"seguros", CatalogTypeSeguros, true, false, false},
 		{"SEGUROS", CatalogTypeSeguros, true, false, false},
-		{"seguro", CatalogTypeGeneric, false, false, false},       // Missing trailing 's'
-		{"MiSeguro", CatalogTypeGeneric, false, false, false},     // Not a prefix
+		{"seguro", CatalogTypeGeneric, false, false, false},   // Missing trailing 's'
+		{"MiSeguro", CatalogTypeGeneric, false, false, false}, // Not a prefix
 
 		// TiposDocumentos (case-sensitive exact match)
 		{"TiposDocumentos", CatalogTypeTiposDocumentos, false, true, false},

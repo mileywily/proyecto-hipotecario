@@ -47,7 +47,7 @@ jobs:
       - name: Run Go Vet & Format Check
         run: |
           go vet ./...
-          test -z $(gofmt -l .) || (echo "Archivos sin formatear con gofmt:" && gofmt -l . && exit 1)
+          test -z "$(gofmt -l .)" || (echo "Archivos sin formatear con gofmt:" && gofmt -l . && exit 1)
 
       - name: Run Unit Tests with Race Detector & Coverage
         run: |
@@ -81,10 +81,10 @@ jobs:
           cd kong-bff-gateway
           docker compose up -d --build
 
-      - name: Wait for Services Health (Max 30s)
+      - name: Wait for Services Health (Max 60s)
         run: |
           echo "Esperando que Kong y Go estén UP..."
-          timeout=30
+          timeout=60
           until curl -s -f http://localhost:8000/health | grep -q "UP" || [ $timeout -le 0 ]; do
             sleep 2
             timeout=$((timeout-2))
