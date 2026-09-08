@@ -4,13 +4,14 @@
 *.dll
 *.so
 *.dylib
-server
-mock-finnflow
+/mortgage-loan-catalogs-go/server
+/mortgage-loan-catalogs-go/mock-finnflow
 app.jar
 
 # Salidas de pruebas y profiling
 *.out
 *.test
+coverage*
 coverage.html
 
 # IDEs y Editores
