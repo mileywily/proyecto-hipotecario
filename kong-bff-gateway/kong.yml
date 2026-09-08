@@ -1,0 +1,80 @@
+_format_version: "3.0"
+
+services:
+  - name: mortgage-loan-catalogs-service
+    host: mortgage-loan-catalogs-upstream
+    port: 8080
+    protocol: http
+    path: /
+    connect_timeout: 30000
+    read_timeout: 60000
+    write_timeout: 60000
+    retries: 2
+    routes:
+      - name: mortgage-loan-catalogs-route
+        paths:
+          - /v1/bfcl/mortgage-loan/catalogs
+        methods:
+          - POST
+          - OPTIONS
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+      - name: mortgage-loan-catalogs-health-route
+        paths:
+          - /health
+          - /ready
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+      - name: mortgage-loan-catalogs-docs-route
+        paths:
+          - /api-docs
+          - /api-docs.yaml
+          - /swagger-ui.html
+          - /swagger-ui
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        protocols:
+          - http
+          - https
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - POST
+            - GET
+            - OPTIONS
+          headers:
+            - Accept
+            - Content-Type
+            - Authorization
+            - X-Correlation-ID
+          exposed_headers:
+            - X-Correlation-ID
+          credentials: true
+          max_age: 3600
+      - name: correlation-id
+        config:
+          header_name: X-Correlation-ID
+          generator: uuid
+          echo_downstream: true
+
+upstreams:
+  - name: mortgage-loan-catalogs-upstream
+    algorithm: round-robin
+    targets:
+      - target: mortgage-loan-catalogs-go:8003
+        weight: 100
+
+

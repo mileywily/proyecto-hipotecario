@@ -1,0 +1,38 @@
+# Stage 1: Build static binary
+FROM golang:alpine AS builder
+
+WORKDIR /app
+
+# Copy source code
+COPY . .
+
+# Build statically linked binary for mock
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w -extldflags '-static'" \
+    -o /app/mock-finnflow ./cmd/mock-finnflow
+
+# Stage 2: Minimal runtime image
+FROM alpine:latest
+
+WORKDIR /app
+
+# Add certificates
+RUN apk --no-cache add ca-certificates
+
+# Create non-root system group and user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy compiled binary from builder
+COPY --from=builder /app/mock-finnflow /app/mock-finnflow
+
+# Ensure ownership
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8080
+
+ENV PORT=8080
+
+ENTRYPOINT ["/app/mock-finnflow"]

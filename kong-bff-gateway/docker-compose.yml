@@ -1,0 +1,59 @@
+services:
+  kong:
+    image: kong:3.8
+    container_name: kong-bff-gateway
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+    volumes:
+      - ./kong.yml:/kong/declarative/kong.yml:ro
+    ports:
+      - "8000:8000"
+      - "8443:8443"
+      - "8001:8001"
+    depends_on:
+      - mortgage-loan-catalogs-go
+    networks:
+      - bff-net
+    restart: unless-stopped
+
+  mortgage-loan-catalogs-go:
+    build:
+      context: ../mortgage-loan-catalogs-go
+      dockerfile: Dockerfile
+    image: mortgage-loan-catalogs-go:latest
+    container_name: mortgage-loan-catalogs-go
+    environment:
+      PORT: "8003"
+      FINNFLOW_URL: "http://finnflow-mock:8080"
+    ports:
+      - "8003:8003"
+    depends_on:
+      - finnflow-mock
+    networks:
+      - bff-net
+    restart: unless-stopped
+
+  finnflow-mock:
+    build:
+      context: ../mortgage-loan-catalogs-go
+      dockerfile: Dockerfile.mock
+    image: finnflow-mock:latest
+    container_name: finnflow-mock
+    environment:
+      PORT: "8080"
+    ports:
+      - "8089:8080"
+    networks:
+      - bff-net
+    restart: unless-stopped
+
+networks:
+  bff-net:
+    driver: bridge

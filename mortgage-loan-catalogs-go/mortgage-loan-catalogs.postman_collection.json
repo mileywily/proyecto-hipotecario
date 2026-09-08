@@ -1,0 +1,252 @@
+{
+	"info": {
+		"_postman_id": "mortgage-loan-catalogs-collection",
+		"name": "Mortgage Loan Catalogs API (Kong BFF & Go)",
+		"description": "Colección de pruebas para validar los catálogos hipotecarios a través de Kong BFF Gateway y directo al microservicio Go.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health Check (Kong)",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/health",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Verifica el estado del servicio a través de Kong Gateway."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Catálogo Destino (Estándar)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/Destino",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"Destino"
+					]
+				},
+				"description": "Consulta el catálogo estándar Destino."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Catálogo SegurosIncendio (Notación Científica)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/SegurosIncendio",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"SegurosIncendio"
+					]
+				},
+				"description": "Valida factor en notación científica Jackson: 2.255E-4."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Catálogo TiposDocumentos (Preserva grupo_id)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/TiposDocumentos",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"TiposDocumentos"
+					]
+				},
+				"description": "Preserva grupo_id: 10 y codigo_adm numérico."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Catálogo tiposdocumentos (Descarta grupo_id)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/tiposdocumentos",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"tiposdocumentos"
+					]
+				},
+				"description": "Fallback genérico: descarta grupo_id y convierte codigo_adm a string."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Catálogo Comunas (Preserva region_id)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/Comunas",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"Comunas"
+					]
+				},
+				"description": "Preserva region_id: 13."
+			},
+			"response": []
+		},
+		{
+			"name": "7. Catálogo Inexistente (Error 402 Contractual)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/Inexistente",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"Inexistente"
+					]
+				},
+				"description": "Valida que el upstream 404 se traduzca a HTTP 402 Payment Required."
+			},
+			"response": []
+		},
+		{
+			"name": "8. Catálogo SinResultados (Legacy 200)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"client_type\": \"NATURAL\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/v1/bfcl/mortgage-loan/catalogs/SinResultados",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"v1",
+						"bfcl",
+						"mortgage-loan",
+						"catalogs",
+						"SinResultados"
+					]
+				},
+				"description": "Valida formato legacy NoResultsResponse."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8000",
+			"type": "string"
+		}
+	]
+}

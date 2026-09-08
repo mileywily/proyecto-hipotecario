@@ -1,0 +1,345 @@
+openapi: 3.0.3
+info:
+  title: Mortgage Loan Catalogs API (Go)
+  description: |
+    Microservicio fachada (BFF) para la consulta y normalización de catálogos de crédito hipotecario bancario.
+    Drop-in replacement de alto rendimiento migrado de Spring Boot a Go con contrato byte a byte.
+  version: 1.0.1
+  contact:
+    name: Arquitectura Hipotecaria Banco Falabella
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor Local Directo (Go)
+  - url: http://localhost:8000
+    description: A través de Kong BFF Gateway
+
+paths:
+  /v1/bfcl/mortgage-loan/catalogs/{catalog}:
+    post:
+      tags:
+        - Catálogos Hipotecarios
+      summary: Obtener elementos de catálogo
+      description: |
+        Consulta los elementos de un catálogo hipotecario. 
+        **Nota arquitectónica:** A pesar de ser una lectura sin body, se expone como método `POST` para preservar el contrato bancario estricto.
+      parameters:
+        - name: catalog
+          in: path
+          required: true
+          description: Nombre del catálogo a consultar.
+          schema:
+            type: string
+            enum:
+              - Destino
+              - Objetivo
+              - TiposConstrucciones
+              - TiposInmuebles
+              - Antiguedades
+              - Comunas
+              - Regiones
+              - Producto
+              - GruposDocumentos
+              - TiposDocumentos
+              - TipoParticipante
+              - CampanasHipotecarias
+              - SegurosIncendio
+              - SegurosDesgravamen
+              - SegurosCesantia
+          example: Destino
+      responses:
+        '200':
+          description: Elementos del catálogo obtenidos exitosamente.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    title: Catálogo Estándar
+                    items:
+                      $ref: '#/components/schemas/CatalogItem'
+                  - type: array
+                    title: Catálogo de Comunas
+                    items:
+                      $ref: '#/components/schemas/ComunaItem'
+                  - type: array
+                    title: Catálogo de Tipos de Documentos
+                    items:
+                      $ref: '#/components/schemas/TipoDocumentoItem'
+                  - type: array
+                    title: Catálogo de Seguros
+                    items:
+                      $ref: '#/components/schemas/SeguroItem'
+                  - type: array
+                    title: Fallback Sin Resultados
+                    items:
+                      $ref: '#/components/schemas/NoResultsResponse'
+              examples:
+                CatalogoEstandar:
+                  summary: Respuesta Estándar (Destino, Regiones, etc.)
+                  value:
+                    - codigo_adm: "1"
+                      descripcion: "Vivienda Principal"
+                Comunas:
+                  summary: Respuesta Comunas (preserva region_id)
+                  value:
+                    - codigo_adm: "13101"
+                      descripcion: "Santiago"
+                      region_id: 13
+                TiposDocumentos:
+                  summary: Respuesta TiposDocumentos (codigo_adm numérico y grupo_id)
+                  value:
+                    - codigo_adm: 5
+                      descripcion: "Liquidación de sueldo"
+                      grupo_id: 2
+                Seguros:
+                  summary: Respuesta Seguros (PascalCase y notación científica)
+                  value:
+                    - IdentificadorSeguro: "1100438-01-2023-000"
+                      Descripcion: "INCENDIO - Everest"
+                      Poliza: "100438-01-2023-000"
+                      NombreCompania: "Everest"
+                      CodigoCompania: 39
+                      CodigoTipoSeguro: 0
+                      CorrelativoPoliza: 28
+                      Tasa: 0.22553
+                      Factor: 2.255E-4
+                      IndicadorPolizaIndividual: 0
+                      PorValorCuota: 0
+                      IndicadorPolizaExterna: 0
+                SinResultados:
+                  summary: Catálogo vacío o fallback ante timeout
+                  value:
+                    - codRespuesta: 3
+                      Mensaje: "Sin resultados."
+                      Excepcion: "Ninguna"
+
+        '400':
+          description: Error de negocio en la obtención de catálogos.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errors_detail: "Error en la obtención de catálogos"
+
+        '401':
+          description: Credenciales no válidas hacia el core upstream.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenNotValidResponse'
+              example:
+                detail: "Given token not valid for any token type"
+                code: "token_not_valid"
+                messages:
+                  - token_class: "AccessToken"
+                    token_type: "access"
+                    message: "Token is invalid"
+
+        '402':
+          description: Catálogo no encontrado (Mapeo contractual estándar bancario de 404 a 402).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                errors_detail: "Catálogo no encontrado"
+
+  /health:
+    get:
+      tags:
+        - Infraestructura
+      summary: Health Check (Liveness)
+      description: Endpoint de verificación de estado para Kubernetes y balanceadores.
+      responses:
+        '200':
+          description: Servicio saludable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "UP"
+
+  /ready:
+    get:
+      tags:
+        - Infraestructura
+      summary: Readiness Check
+      description: Endpoint que confirma si el servicio está listo para recibir tráfico.
+      responses:
+        '200':
+          description: Servicio listo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "UP"
+
+components:
+  schemas:
+    CatalogItem:
+      type: object
+      required:
+        - codigo_adm
+        - descripcion
+      properties:
+        codigo_adm:
+          type: string
+          example: "1"
+        descripcion:
+          type: string
+          example: "Vivienda Principal"
+
+    ComunaItem:
+      type: object
+      required:
+        - codigo_adm
+        - descripcion
+      properties:
+        codigo_adm:
+          type: string
+          example: "13101"
+        descripcion:
+          type: string
+          example: "Santiago"
+        region_id:
+          type: integer
+          nullable: true
+          example: 13
+
+    TipoDocumentoItem:
+      type: object
+      required:
+        - descripcion
+      properties:
+        codigo_adm:
+          type: integer
+          nullable: true
+          example: 5
+        descripcion:
+          type: string
+          example: "Liquidación de sueldo"
+        grupo_id:
+          type: integer
+          nullable: true
+          example: 2
+
+    SeguroItem:
+      type: object
+      required:
+        - IdentificadorSeguro
+        - Descripcion
+        - Poliza
+        - NombreCompania
+      properties:
+        IdentificadorSeguro:
+          type: string
+          example: "1100438-01-2023-000"
+        Descripcion:
+          type: string
+          example: "INCENDIO - Everest"
+        Poliza:
+          type: string
+          example: "100438-01-2023-000"
+        NombreCompania:
+          type: string
+          example: "Everest"
+        CodigoCompania:
+          type: integer
+          nullable: true
+          example: 39
+        CodigoTipoSeguro:
+          type: integer
+          nullable: true
+          example: 0
+        CorrelativoPoliza:
+          type: integer
+          nullable: true
+          example: 28
+        Tasa:
+          type: number
+          nullable: true
+          example: 0.22553
+        Factor:
+          type: number
+          nullable: true
+          description: "Representa el factor actuarial (Jackson Double format, ej. 2.255E-4)."
+          example: 0.0002255
+        IndicadorPolizaIndividual:
+          type: integer
+          nullable: true
+          example: 0
+        PorValorCuota:
+          type: integer
+          nullable: true
+          example: 0
+        IndicadorPolizaExterna:
+          type: integer
+          nullable: true
+          example: 0
+
+    NoResultsResponse:
+      type: object
+      required:
+        - codRespuesta
+        - Mensaje
+        - Excepcion
+      properties:
+        codRespuesta:
+          type: integer
+          example: 3
+        Mensaje:
+          type: string
+          example: "Sin resultados."
+        Excepcion:
+          type: string
+          example: "Ninguna"
+
+    ErrorResponse:
+      type: object
+      required:
+        - errors_detail
+      properties:
+        errors_detail:
+          type: string
+          example: "Catálogo no encontrado"
+
+    TokenNotValidResponse:
+      type: object
+      required:
+        - detail
+        - code
+        - messages
+      properties:
+        detail:
+          type: string
+          example: "Given token not valid for any token type"
+        code:
+          type: string
+          example: "token_not_valid"
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              token_class:
+                type: string
+                example: "AccessToken"
+              token_type:
+                type: string
+                example: "access"
+              message:
+                type: string
+                example: "Token is invalid"
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: "UP"

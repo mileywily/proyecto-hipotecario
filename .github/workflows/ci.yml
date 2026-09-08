@@ -1,0 +1,175 @@
+name: CI/CD Pipeline - Mortgage Loan Catalogs Go & Kong BFF
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+      - 'feature/**'
+      - 'bugfix/**'
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # =========================================================================
+  # 1. Pruebas Unitarias y Cobertura en Go
+  # =========================================================================
+  test:
+    name: Unit Tests & Parity Verification
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./mortgage-loan-catalogs-go
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: './mortgage-loan-catalogs-go/go.mod'
+          cache-dependency-path: './mortgage-loan-catalogs-go/go.sum'
+
+      - name: Download Go Dependencies
+        run: go mod download
+
+      - name: Run Go Vet & Format Check
+        run: |
+          go vet ./...
+          test -z $(gofmt -l .) || (echo "Archivos sin formatear con gofmt:" && gofmt -l . && exit 1)
+
+      - name: Run Unit Tests with Race Detector & Coverage
+        run: |
+          go test -v -race -covermode=atomic -coverprofile=coverage.out ./internal/... ./cmd/... ./api/...
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: go-coverage-report
+          path: ./mortgage-loan-catalogs-go/coverage.out
+          retention-days: 7
+
+  # =========================================================================
+  # 2. Construcción de Contenedores y Smoke Test E2E (Docker Compose)
+  # =========================================================================
+  integration-smoke-test:
+    name: Integration Smoke Test (Kong + Go + Mock)
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Start Stack with Docker Compose
+        run: |
+          cd kong-bff-gateway
+          docker compose up -d --build
+
+      - name: Wait for Services Health (Max 30s)
+        run: |
+          echo "Esperando que Kong y Go estén UP..."
+          timeout=30
+          until curl -s -f http://localhost:8000/health | grep -q "UP" || [ $timeout -le 0 ]; do
+            sleep 2
+            timeout=$((timeout-2))
+            echo "Esperando respuesta de http://localhost:8000/health (quedan ${timeout}s)..."
+          done
+          if [ $timeout -le 0 ]; then
+            echo "ERROR: Timeout esperando inicio de servicios."
+            cd kong-bff-gateway && docker compose logs
+            exit 1
+          fi
+          echo "¡Servicios listos y respondiendo UP!"
+
+      - name: Run E2E Smoke Tests via Kong BFF
+        run: |
+          echo "1. Probando Health Check..."
+          curl -i -f http://localhost:8000/health
+
+          echo "2. Probando Swagger UI..."
+          curl -i -f http://localhost:8000/swagger-ui.html
+
+          echo "3. Probando Catálogo Destino (200 OK)..."
+          RESP=$(curl -s -X POST http://localhost:8000/v1/bfcl/mortgage-loan/catalogs/Destino \
+            -H "Content-Type: application/json" \
+            -d '{"client_type":"NATURAL"}')
+          echo "Respuesta: $RESP"
+          echo "$RESP" | grep -q "Vivienda Principal"
+
+          echo "4. Probando Notación Científica SegurosIncendio (Factor: 2.255E-4)..."
+          RESP_SEGUROS=$(curl -s -X POST http://localhost:8000/v1/bfcl/mortgage-loan/catalogs/SegurosIncendio \
+            -H "Content-Type: application/json" \
+            -d '{"client_type":"NATURAL"}')
+          echo "Respuesta Seguros: $RESP_SEGUROS"
+          echo "$RESP_SEGUROS" | grep -q "2.255E-4"
+
+          echo "5. Probando Catálogo Inexistente (HTTP 402 Catálogo no encontrado)..."
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:8000/v1/bfcl/mortgage-loan/catalogs/Inexistente \
+            -H "Content-Type: application/json" \
+            -d '{"client_type":"NATURAL"}')
+          echo "Código HTTP obtenido: $STATUS_CODE"
+          [ "$STATUS_CODE" -eq 402 ]
+
+      - name: Teardown Docker Stack
+        if: always()
+        run: |
+          cd kong-bff-gateway
+          docker compose down -v
+
+  # =========================================================================
+  # 3. Publicación a GitHub Container Registry (GHCR) [Opcional al hacer merge a main]
+  # =========================================================================
+  publish:
+    name: Build & Publish Docker Image to GHCR
+    runs-on: ubuntu-latest
+    needs: integration-smoke-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker Metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/mortgage-loan-catalogs-go
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./mortgage-loan-catalogs-go
+          file: ./mortgage-loan-catalogs-go/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

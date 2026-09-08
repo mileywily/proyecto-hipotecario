@@ -1,0 +1,31 @@
+# Binarios compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+server
+mock-finnflow
+app.jar
+
+# Salidas de pruebas y profiling
+*.out
+*.test
+coverage.html
+
+# IDEs y Editores
+.idea/
+.vscode/
+*.swp
+*~
+
+# Sistema y logs
+*.log
+.DS_Store
+Thumbs.db
+stack-hipotecario.tar
+ecosistema-catalogo.tar
+
+# Carpetas temporales de agentes
+.system_generated/
+scratch/
